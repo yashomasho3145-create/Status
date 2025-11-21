@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>成長ステータス</title>
+  <style>
+    :root {
+      --bg-grad: linear-gradient(180deg, #f6edff 0%, #fdfbff 40%, #ffffff 100%);
+      --card-bg: #ffffff;
+      --accent: #8b5cf6;
+      --accent-soft: #ede9fe;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background: var(--bg-grad);
+      color: var(--text-main);
+    }
+    header {
+      padding: 16px 16px 8px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    header p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    main {
+      padding: 0 12px 64px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 640px) {
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    .summary-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 10px 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,.05);
+    }
+    .summary-label {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+    .summary-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 14px 14px 18px;
+      box-shadow: 0 8px 24px rgba(129,140,248,.12);
+      margin-bottom: 12px;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .panel-title span.icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+    }
+    .panel-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 260px;
+      margin-top: 4px;
+    }
+
+    .bottom-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .metric-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 12px 14px;
+      box-shadow: 0 5px 18px rgba(0,0,0,.04);
+    }
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+    .metric-main {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .metric-extra {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    /* bottom nav */
+    nav.bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      background: #ffffffcc;
+      backdrop-filter: blur(12px);
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      font-size: 10px;
+      z-index: 20;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: #9ca3af;
+      text-decoration: none;
+    }
+    .nav-item span.icon {
+      font-size: 16px;
+    }
+    .nav-item.active {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-sub);
+      padding: 24px 0;
+    }
+  </style>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header>
+  <h1>成長ステータス</h1>
+  <p>あなたの成長を可視化します</p>
+</header>
+
+<main>
+  <div id="loading" class="loading">読み込み中...</div>
+
+  <div id="mainContent" style="display:none;">
+    <section class="summary-grid" id="summaryGrid">
+      <div class="summary-card">
+        <div class="summary-label">総タスク</div>
+        <div class="summary-value" id="totalTasks">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">完了</div>
+        <div class="summary-value" id="completedTasks">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">進行中</div>
+        <div class="summary-value" id="activeTasks">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">ジャーナル</div>
+        <div class="summary-value" id="journalCount">0</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="icon">📈</span>
+          成長レーダーチャート
+        </div>
+        <div class="panel-sub" id="periodLabel">直近7日間</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="radarChart"></canvas>
+      </div>
+    </section>
+
+    <section class="bottom-metrics">
+      <div class="metric-card">
+        <div class="metric-label">タスク完了率</div>
+        <div class="metric-main"><span id="taskCompleteRate">0</span>%</div>
+        <div class="metric-extra" id="taskCompleteDetail">0 / 0 件</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">意味量スコア</div>
+        <div class="metric-main"><span id="meaningScore">0</span> / 100</div>
+        <div class="metric-extra">ビジョン・成長・わくわくの総合評価</div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <!-- URLは実際のLIFF URLに差し替えてね -->
+  <a href="https://liff.line.me/2008372898-2q9qWmxv" class="nav-item">
+    <span class="icon">📋</span>
+    <span>タスク</span>
+  </a>
+  <a href="#" class="nav-item">
+    <span class="icon">📓</span>
+    <span>ジャーナル</span>
+  </a>
+  <a href="#" class="nav-item active">
+    <span class="icon">📊</span>
+    <span>ステータス</span>
+  </a>
+</nav>
+
+<script>
+  const LIFF_ID_STATUS = 'YOUR_LIFF_ID_STATUS';
+  const API_BASE = 'https://yamasho.xvps.jp/webhook';
+
+  let radarChart = null;
+  let userId = null;
+
+  async function init() {
+    await liff.init({ liffId: LIFF_ID_STATUS });
+    if (!liff.isLoggedIn()) liff.login();
+    try {
+      const profile = await liff.getProfile();
+      userId = profile.userId;
+    } catch (e) {
+      console.error(e);
+      alert('ユーザー情報の取得に失敗しました');
+      return;
+    }
+
+    await loadStatus();
+  }
+
+  async function loadStatus() {
+    const loadingEl = document.getElementById('loading');
+    const mainContent = document.getElementById('mainContent');
+    loadingEl.style.display = 'block';
+    mainContent.style.display = 'none';
+
+    try {
+      const listUrl = `${API_BASE}/list?user_id=${encodeURIComponent(userId)}`;
+      const res = await fetch(listUrl);
+      if (!res.ok) throw new Error('list api failed');
+      const listData = await res.json();
+
+      // journalingは今は0。将来 /journal を叩く形に
+      const journalStats = await fetchJournalStats();
+
+      const stats = computeStats(listData, journalStats);
+      renderSummary(stats);
+      renderRadar(stats);
+      renderBottomMetrics(stats);
+
+      loadingEl.style.display = 'none';
+      mainContent.style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('ステータスの取得に失敗しました');
+      loadingEl.textContent = '読み込みに失敗しました…';
+    }
+  }
+
+  async function fetchJournalStats() {
+    // TODO: /journal?user_id=... を作ったらここで取得
+    return {
+      count: 0,
+      continueRate: 0 // 0〜100
+    };
+  }
+
+  function computeStats(listData, journal) {
+    const pinned = listData.pinned || [];
+    const active = listData.active || [];
+    const completed = listData.completed || [];
+
+    const allTasks = [...pinned, ...active, ...completed];
+
+    const totalTasks = allTasks.length;
+    const completedTasks = completed.length;
+    const activeTasks = totalTasks - completedTasks;
+
+    const taskCompleteRate = totalTasks ? Math.round(completedTasks / totalTasks * 100) : 0;
+
+    const now = new Date();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const sevenDaysAgo = new Date(now.getTime() - 6 * msPerDay); // 今日含め7日
+
+    const perDay = {};
+    let completedIn7 = 0;
+    for (const t of completed) {
+      if (!t.completed_at) continue;
+      const dt = new Date(t.completed_at);
+      if (dt < sevenDaysAgo) continue;
+      const key = dt.toISOString().slice(0, 10);
+      perDay[key] = (perDay[key] || 0) + 1;
+      completedIn7++;
+    }
+    const distinctDays = Object.keys(perDay).length;
+    const taskContinueRate = Math.round(distinctDays / 7 * 100);
+
+    const avgTaskPerDay = +(completedIn7 / 7).toFixed(2);
+    const avgTaskPerDayScaled = Math.min(100, Math.round((avgTaskPerDay / 5) * 100));
+
+    let meaningTotal = 0;
+    let meaningCount = 0;
+    for (const t of allTasks) {
+      const m = meaningScoreOfTask(t);
+      if (!isNaN(m)) {
+        meaningTotal += m;
+        meaningCount++;
+      }
+    }
+    const meaningScore = meaningCount ? Math.round(meaningTotal / meaningCount) : 0;
+
+    const journalCount = journal.count || 0;
+    const journalContinueRate = journal.continueRate || 0;
+
+    return {
+      totalTasks,
+      completedTasks,
+      activeTasks,
+      taskCompleteRate,
+      taskContinueRate,
+      avgTaskPerDay,
+      avgTaskPerDayScaled,
+      meaningScore,
+      journalCount,
+      journalContinueRate
+    };
+  }
+
+  function meaningScoreOfTask(t) {
+    const v = Number(t.vision_score ?? 0);
+    const e = Number(t.excite_score ?? 0);
+    const g = Number(t.growth_score ?? 0);
+    const p = Number(t.priority ?? 0);
+    if ([v,e,g,p].every(x => x === 0)) return 0;
+    // 仕様の式：10×(0.35*vision + 0.25*excite + 0.25*growth + 0.15*priority)
+    const score = 10 * (0.35*v + 0.25*e + 0.25*g + 0.15*p);
+    return Math.round(score);
+  }
+
+  function renderSummary(stats) {
+    document.getElementById('totalTasks').textContent = stats.totalTasks;
+    document.getElementById('completedTasks').textContent = stats.completedTasks;
+    document.getElementById('activeTasks').textContent = stats.activeTasks;
+    document.getElementById('journalCount').textContent = stats.journalCount;
+  }
+
+  function renderBottomMetrics(stats) {
+    document.getElementById('taskCompleteRate').textContent = stats.taskCompleteRate;
+    document.getElementById('taskCompleteDetail').textContent =
+      `${stats.completedTasks} / ${stats.totalTasks} 件`;
+
+    document.getElementById('meaningScore').textContent = stats.meaningScore;
+  }
+
+  function renderRadar(stats) {
+    const ctx = document.getElementById('radarChart').getContext('2d');
+
+    const data = {
+      labels: [
+        'タスク完了率',
+        'タスク継続率',
+        '日記継続率',
+        '意味量スコア',
+        '平均タスク量'
+      ],
+      datasets: [{
+        label: '成長スコア',
+        data: [
+          stats.taskCompleteRate,
+          stats.taskContinueRate,
+          stats.journalContinueRate,
+          stats.meaningScore,
+          stats.avgTaskPerDayScaled
+        ],
+        fill: true,
+        borderWidth: 2,
+        pointRadius: 3
+      }]
+    };
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { stepSize: 25, display: true, showLabelBackdrop: false },
+          grid: { circular: true }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    };
+
+    if (radarChart) radarChart.destroy();
+    radarChart = new Chart(ctx, { type: 'radar', data, options });
+  }
+
+  init();
+</script>
+</body>
+</html>
